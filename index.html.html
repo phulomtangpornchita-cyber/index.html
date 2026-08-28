@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>สับผลไม้เลขคู่ - เกมคณิตศาสตร์สนุกๆ</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+            font-family: 'Sarabun', 'Comic Sans MS', sans-serif;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #ffecd2, #fcb69f);
+        }
+        canvas {
+            display: block;
+            touch-action: none;
+            width: 100%;
+            height: 100%;
+        }
+        /* UI Overlay Elements */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: auto;
+        }
+        .hud-box {
+            background: rgba(255, 255, 255, 0.85);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #d35400;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .instruction-banner {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #e74c3c;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            margin: 0 auto;
+            pointer-events: auto;
+            animation: pulseBanner 1.5s infinite alternate;
+        }
+        @keyframes pulseBanner {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
+        .btn-icon {
+            background: #fff;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            font-size: 1.3rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+            pointer-events: auto;
+        }
+        .btn-icon:active {
+            transform: scale(0.9);
+        }
+        /* Modals / Cards */
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            z-index: 10;
+            padding: 20px;
+        }
+        .card {
+            background: #fff;
+            width: 100%;
+            max-width: 420px;
+            border-radius: 25px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.7); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .card h2 {
+            color: #ff6b6b;
+            font-size: 1.8rem;
+            margin-bottom: 12px;
+        }
+        .card p, .card li {
+            color: #555;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            text-align: left;
+            margin-bottom: 8px;
+        }
+        .card ul {
+            list-style: none;
+            padding: 0;
+            margin: 15px 0;
+        }
+        .card li {
+            background: #fff5f5;
+            padding: 8px 12px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #ff6b6b 100%);
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+            transition: transform 0.1s, box-shadow 0.1s;
+            margin-top: 15px;
+            width: 100%;
+        }
+        .btn-primary:active {
+            transform: scale(0.96);
+        }
+        .hidden {
+            display: none !important;
+        }
+        .stars-container {
+            font-size: 2.5rem;
+            margin: 10px 0;
+            letter-spacing: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI Layer -->
+    <div class="ui-layer">
+        <div class="top-bar">
+            <div class="hud-box">
+                ⭐ <span id="scoreDisplay">0</span> / 1200
+            </div>
+            <div class="instruction-banner">
+                ✨ ปาดเฉพาะเลขคู่! ✨
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <div class="hud-box" id="livesDisplay">
+                    ❤️❤️❤️
+                </div>
+                <button class="btn-icon" id="btnHelp" onclick="openHelpModal()">❔</button>
+            </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <div class="hud-box" style="font-size: 1rem;">
+                ⏳ <span id="timeDisplay">40</span>s
+            </div>
+            <div class="hud-box" id="comboDisplay" style="color: #e67e22; display: none;">
+                🔥 คอมโบ x<span id="comboVal">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- How to Play Modal (Intro) -->
+    <div id="helpModal" class="modal-overlay">
+        <div class="card">
+            <h2>🍎 สับผลไม้เลขคู่ 🍐</h2>
+            <p><strong>🎯 เป้าหมาย:</strong> ปาดเฉพาะผลไม้เลขคู่ให้ครบ 1200 คะแนน!</p>
+            <ul>
+                <li>👆 <span>ลากนิ้วผ่านหน้าจอเป็นใบมีดเพื่อสับผลไม้</span></li>
+                <li>✌️ <span>ปาดเฉพาะผลไม้ <strong>เลขคู่</strong> (2, 4, 6, ..., 20)</span></li>
+                <li>❤️ <span>ปาดเลขคี่ จะเสียพลังชีวิต 1 ดวง (ปล่อยหล่นไม่เป็นไร)</span></li>
+                <li>💡 <span>สับถูกต่อเนื่องจะได้คะแนนคอมโบพิเศษ!</span></li>
+            </ul>
+            <button class="btn-primary" onclick="startGame()">เริ่มเล่น! 🚀</button>
+        </div>
+    </div>
+
+    <!-- Game Over / Victory Modal -->
+    <div id="gameOverModal" class="modal-overlay hidden">
+        <div class="card">
+            <h2 id="endTitle">จบเกมแล้วจ้า!</h2>
+            <div class="stars-container" id="endStars">⭐⭐⭐</div>
+            <p id="endMessage" style="text-align: center; font-size: 1.2rem; margin: 15px 0;">ทำคะแนนได้ 1250 คะแนน</p>
+            <button class="btn-primary" onclick="restartGame()">เล่นใหม่อีกครั้ง 🔄</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Responsive Canvas Scaling
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Game States
+        let gameState = 'IDLE'; // IDLE, PLAYING, GAMEOVER
+        let score = 0;
+        let lives = 3;
+        let timeLeft = 40;
+        let gameTimer = null;
+        let spawnerTimer = null;
+        let combo = 0;
+        let comboTimer = null;
+
+        // Assets and Entities
+        let fruits = [];
+        let particles = [];
+        let floatTexts = [];
+        let trailPoints = [];
+
+        // Input Tracking
+        let isTouching = false;
+        let lastX = 0, lastY = 0;
+        let curX = 0, curY = 0;
+
+        // Colors & Theme
+        const fruitColors = ['#ff6b6b', '#ffa502', '#2ed573', '#1e90ff', '#9b59b6', '#ff4757', '#2ed573'];
+
+        function openHelpModal() {
+            document.getElementById('helpModal').classList.remove('hidden');
+            if(gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+            }
+        }
+
+        function startGame() {
+            document.getElementById('helpModal').classList.add('hidden');
+            score = 0;
+            lives = 3;
+            timeLeft = 40;
+            combo = 0;
+            fruits = [];
+            particles = [];
+            floatTexts = [];
+            updateHUD();
+            gameState = 'PLAYING';
+
+            if(gameTimer) clearInterval(gameTimer);
+            if(spawnerTimer) clearInterval(spawnerTimer);
+
+            gameTimer = setInterval(() => {
+                if(gameState === 'PLAYING') {
+                    timeLeft--;
+                    document.getElementById('timeDisplay').innerText = timeLeft;
+                    if(timeLeft <= 0 || lives <= 0) {
+                        endGame();
+                    }
+                }
+            }, 1000);
+
+            spawnerTimer = setInterval(() => {
+                if(gameState === 'PLAYING') {
+                    spawnFruitWave();
+                }
+            }, 1100);
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverModal').classList.add('hidden');
+            startGame();
+        }
+
+        function endGame() {
+            gameState = 'GAMEOVER';
+            clearInterval(gameTimer);
+            clearInterval(spawnerTimer);
+
+            const modal = document.getElementById('gameOverModal');
+            modal.classList.remove('hidden');
+
+            const title = document.getElementById('endTitle');
+            const starsEl = document.getElementById('endStars');
+            const msg = document.getElementById('endMessage');
+
+            let stars = 1;
+            if(score >= 1200 && lives >= 2) {
+                stars = 3;
+                title.innerText = "ยอดเยี่ยมมาก! 🎉";
+            } else if(score >= 1200 || score >= 600) {
+                stars = 2;
+                title.innerText = "เก่งมากเลย! 👍";
+            } else {
+                stars = 1;
+                title.innerText = "พยายามอีกนิดนะ! 💪";
+            }
+
+            starsEl.innerText = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+            msg.innerText = `คะแนนรวม: ${score} คะแนน`;
+        }
+
+        function updateHUD() {
+            document.getElementById('scoreDisplay').innerText = score;
+            document.getElementById('livesDisplay').innerText = '❤️'.repeat(Math.max(0, lives));
+            if(combo > 1) {
+                document.getElementById('comboDisplay').style.display = 'block';
+                document.getElementById('comboVal').innerText = combo;
+            } else {
+                document.getElementById('comboDisplay').style.display = 'none';
+            }
+        }
+
+        // Fruit Spawner
+        function spawnFruitWave() {
+            const count = Math.random() < 0.4 ? 2 : 1;
+            for(let i = 0; i < count; i++) {
+                // Generate numbers 1 to 20
+                let num = Math.floor(Math.random() * 20) + 1;
+                // Ensure balanced mix of even and odd, slightly favoring even for kids
+                if(Math.random() < 0.6) {
+                    num = (Math.floor(Math.random() * 10) + 1) * 2; // Even 2-20
+                }
+
+                const radius = Math.max(32, Math.min(canvas.width, canvas.height) * 0.05);
+                const x = Math.random() * (canvas.width - 150) + 75;
+                const y = canvas.height + radius + 10;
+
+                // Parabolic velocity
+                const vx = (canvas.width / 2 - x) * (Math.random() * 0.005 + 0.002) + (Math.random() - 0.5) * 2;
+                const vy = -(Math.random() * 4 + 13); // Upward velocity
+
+                fruits.push({
+                    x: x,
+                    y: y,
+                    vx: vx,
+                    vy: vy,
+                    radius: radius,
+                    number: num,
+                    isEven: num % 2 === 0,
+                    sliced: false,
+                    color: fruitColors[Math.floor(Math.random() * fruitColors.length)],
+                    rotation: 0,
+                    rotSpeed: (Math.random() - 0.5) * 0.1
+                });
+            }
+        }
+
+        // Particle & Juice effect
+        function createSplash(x, y, color) {
+            for(let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    radius: Math.random() * 5 + 2,
+                    color: color,
+                    alpha: 1,
+                    decay: Math.random() * 0.03 + 0.02
+                });
+            }
+        }
+
+        function addFloatText(x, y, text, color) {
+            floatTexts.push({
+                x: x,
+                y: y,
+                text: text,
+                color: color,
+                alpha: 1,
+                vy: -2
+            });
+        }
+
+        // Input Listeners for Blade Tracking
+        window.addEventListener('mousedown', (e) => {
+            if(gameState !== 'PLAYING') return;
+            isTouching = true;
+            lastX = curX = e.clientX;
+            lastY = curY = e.clientY;
+            trailPoints.push({x: curX, y: curY, life: 1});
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if(!isTouching || gameState !== 'PLAYING') return;
+            lastX = curX;
+            lastY = curY;
+            curX = e.clientX;
+            curY = e.clientY;
+            trailPoints.push({x: curX, y: curY, life: 1});
+            checkSliceCollision();
+        });
+
+        window.addEventListener('mouseup', () => {
+            isTouching = false;
+        });
+
+        window.addEventListener('touchstart', (e) => {
+            if(gameState !== 'PLAYING') return;
+            isTouching = true;
+            const touch = e.touches[0];
+            lastX = curX = touch.clientX;
+            lastY = curY = touch.clientY;
+            trailPoints.push({x: curX, y: curY, life: 1});
+        }, {passive: true});
+
+        window.addEventListener('touchmove', (e) => {
+            if(!isTouching || gameState !== 'PLAYING') return;
+            const touch = e.touches[0];
+            lastX = curX;
+            lastY = curY;
+            curX = touch.clientX;
+            curY = touch.clientY;
+            trailPoints.push({x: curX, y: curY, life: 1});
+            checkSliceCollision();
+        }, {passive: true});
+
+        window.addEventListener('touchend', () => {
+            isTouching = false;
+        });
+
+        // Collision Check (Line-to-Circle distance)
+        function checkSliceCollision() {
+            for(let i = 0; i < fruits.length; i++) {
+                let f = fruits[i];
+                if(f.sliced) continue;
+
+                // Distance from point (cx, cy) to line segment (lastX, lastY) -> (curX, curY)
+                let dist = distToSegment({x: f.x, y: f.y}, {x: lastX, y: lastY}, {x: curX, y: curY});
+                if(dist < f.radius + 15) { // Generous radius for kids
+                    f.sliced = true;
+                    if(f.isEven) {
+                        // Correct!
+                        combo++;
+                        let points = 100 + (combo > 1 ? (combo - 1) * 20 : 0);
+                        score += points;
+                        createSplash(f.x, f.y, f.color);
+                        addFloatText(f.x, f.y, `+${points}`, '#2ed573');
+                        
+                        // Reset combo timer
+                        if(comboTimer) clearTimeout(comboTimer);
+                        comboTimer = setTimeout(() => { combo = 0; updateHUD(); }, 2500);
+
+                        if(score >= 1200) {
+                            setTimeout(endGame, 500);
+                        }
+                    } else {
+                        // Incorrect (Odd number)
+                        lives--;
+                        combo = 0;
+                        createSplash(f.x, f.y, '#e74c3c');
+                        addFloatText(f.x, f.y, '-1 ❤️', '#e74c3c');
+                        if(lives <= 0) {
+                            setTimeout(endGame, 500);
+                        }
+                    }
+                    updateHUD();
+                }
+            }
+        }
+
+        function distToSegment(p, p1, p2) {
+            let l2 = (p2.x - p1.x)*(p2.x - p1.x) + (p2.y - p1.y)*(p2.y - p1.y);
+            if (l2 === 0) return Math.hypot(p.x - p1.x, p.y - p1.y);
+            let t = ((p.x - p1.x)*(p2.x - p1.x) + (p.y - p1.y)*(p2.y - p1.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return Math.hypot(p.x - (p1.x + t * (p2.x - p1.x)), p.y - (p1.y + t * (p2.y - p1.y)));
+        }
+
+        // Game Loop
+        function update() {
+            if(gameState === 'PLAYING') {
+                // Update fruits with gravity
+                for(let i = fruits.length - 1; i >= 0; i--) {
+                    let f = fruits[i];
+                    f.x += f.vx;
+                    f.y += f.vy;
+                    f.vy += 0.35; // Gravity
+                    f.rotation += f.rotSpeed;
+
+                    // Remove if fallen off screen
+                    if(f.y > canvas.height + 100) {
+                        fruits.splice(i, 1);
+                    }
+                }
+            }
+
+            // Update particles
+            for(let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+                if(p.alpha <= 0) particles.splice(i, 1);
+            }
+
+            // Update floating texts
+            for(let i = floatTexts.length - 1; i >= 0; i--) {
+                let ft = floatTexts[i];
+                ft.y += ft.vy;
+                ft.alpha -= 0.02;
+                if(ft.alpha <= 0) floatTexts.splice(i, 1);
+            }
+
+            // Update trail fade
+            for(let i = trailPoints.length - 1; i >= 0; i--) {
+                trailPoints[i].life -= 0.15;
+                if(trailPoints[i].life <= 0) trailPoints.splice(i, 1);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Background Soft Sun & Clouds (Kawaii theme)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(canvas.width * 0.8, canvas.height * 0.2, 80, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw Fruits
+            for(let f of fruits) {
+                ctx.save();
+                ctx.translate(f.x, f.y);
+                ctx.rotate(f.rotation);
+
+                // Fruit Body (Kawaii gloss style)
+                ctx.fillStyle = f.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, f.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#fff';
+                ctx.stroke();
+
+                // Leaf & Stem
+                ctx.fillStyle = '#2ed573';
+                ctx.beginPath();
+                ctx.ellipse(0, -f.radius, 8, 4, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Number Label (Large, readable for kids)
+                ctx.rotate(-f.rotation); // Keep text upright or natural rotation
+                ctx.fillStyle = '#fff';
+                ctx.font = `bold ${Math.floor(f.radius * 0.85)}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(0,0,0,0.4)';
+                ctx.shadowBlur = 6;
+                ctx.fillText(f.number, 0, 2);
+                ctx.shadowBlur = 0;
+
+                ctx.restore();
+            }
+
+            // Draw Particles / Juice
+            for(let p of particles) {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Draw Floating Texts
+            for(let ft of floatTexts) {
+                ctx.save();
+                ctx.globalAlpha = ft.alpha;
+                ctx.fillStyle = ft.color;
+                ctx.font = 'bold 2rem sans-serif';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 4;
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            }
+
+            // Draw Blade / Touch Trail
+            if(trailPoints.length > 1) {
+                ctx.save();
+                for(let i = 1; i < trailPoints.length; i++) {
+                    let p1 = trailPoints[i - 1];
+                    let p2 = trailPoints[i];
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${p2.life})`;
+                    ctx.lineWidth = p2.life * 10;
+                    ctx.lineCap = 'round';
+                    ctx.shadowColor = '#00d2d3';
+                    ctx.shadowBlur = 12;
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Initialize display
+        updateHUD();
+        loop();
+    </script>
+</body>
+</html>
